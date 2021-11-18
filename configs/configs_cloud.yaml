@@ -1,0 +1,12 @@
+server:
+  address:
+    ip: 100.64.0.4
+    port: 9990
+
+client:
+  address:
+    ip: 172.26.254.98
+    port: 9992
+
+
+

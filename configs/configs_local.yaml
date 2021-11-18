@@ -1,0 +1,12 @@
+server:
+  address:
+    ip: 192.168.31.165
+    port: 9990
+
+client:
+  address:
+    ip: 192.168.31.165
+    port: 9992
+
+
+
