@@ -28,13 +28,27 @@ class ConfigLoader:
     def get_client_ip(self):
         return self.configs["client"]["address"]["ip"]
 
+    def get_trace_path(self):
+        return self.global_config["experiment"]["trace"]
 
+    def get_base_delay(self):
+        return self.global_config["experiment"]["base_delay"]
+
+    def get_use_trace(self):
+        return True if self.global_config["experiment"]["use_trace"]==1 else False
+
+    def get_control_interval(self):
+        return self.global_config["experiment"]["control_interval"]
+
+    def get_running_time(self):
+        return self.global_config["experiment"]["running_time"]
 
 
 if __name__ == "__main__":
 
     config_loader = ConfigLoader()
     print(config_loader.get_server_address())
+    print(config_loader.get_use_trace())
 
 
 

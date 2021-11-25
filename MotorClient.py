@@ -23,6 +23,9 @@ class MotorClient:
 
         self.config_loader = ConfigLoader()
 
+        self.control_interval = self.config_loader.get_control_interval()
+        self.running_time = self.config_loader.get_running_time()
+
         self.client_address = self.config_loader.get_client_address()
         self.server_address = None
 
@@ -32,8 +35,9 @@ class MotorClient:
 
     def start(self):
         self.motor.start()
-        for i in range(1000):
-            time.sleep(0.01)
+        start_time = time.time()
+        while(True):
+            time.sleep(self.control_interval)
             states = self.motor.get_states()
             if not states:
                 continue
@@ -48,6 +52,14 @@ class MotorClient:
                     self.motor.update_action(action)
             except Exception as e:
                 print("指令数据包解析出错！", e)
+
+            progress = round(((time.time() - start_time) / self.running_time) * 100, 1)
+            print("\r", end="")
+            print("Download progress: {}% ".format(progress), end="")
+            sys.stdout.flush()
+
+            if(time.time() - start_time >= self.running_time):
+                break
         print("运行结束！")
         self.stop()
 
@@ -77,7 +89,7 @@ class MotorClient:
         self.client_sock.sendto(pkt.encode(), self.server_address)
 
     def stop(self):
-
+        print("stopping ...")
         stop_msg = {"type": "stop", KEY_CLIENT_ID: self.client_id}
         pkt = json.dumps(stop_msg).encode()
         self.client_sock.sendto(pkt, self.server_address)

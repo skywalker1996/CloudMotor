@@ -1,6 +1,6 @@
 server:
   address:
-    ip: 100.64.0.4
+    ip: 100.64.0.2
     port: 9990
 
 client:

@@ -23,6 +23,8 @@ class MotorServer:
 
         self.client_address = self.config_loader.get_client_address()
 
+        self._exit_flag = False
+
     def start(self):
 
         self.control_thread.setDaemon(True)
@@ -74,6 +76,8 @@ class MotorServer:
 
                     del self.client_info[client_id]
                     del self.records[client_id]
+                    self._exit_flag = True
+                    break
 
             except Exception as e:
                 print("monitor 数据包解析出错 ：", e)
@@ -87,8 +91,11 @@ class MotorServer:
 
         self.server_sock.sendto(pkt, client_address)
 
+    def get_exit_flag(self):
+        return self._exit_flag
+
 
 motor_server = MotorServer()
 motor_server.start()
-while True:
-    time.sleep(10)
+while not motor_server.get_exit_flag():
+    time.sleep(1)
