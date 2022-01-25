@@ -11,7 +11,7 @@ import matplotlib.pylab as plt
 import json
 import os
 
-from configs.configLoader import ConfigLoader
+from configs.configLoader import configLoader
 
 
 class MotorClient:
@@ -23,7 +23,7 @@ class MotorClient:
 
         self.motor = Motor(self.client_id, rpm=self.target_rpm)
 
-        self.config_loader = ConfigLoader()
+        self.config_loader = configLoader()
 
         self.control_interval = self.config_loader.get_control_interval()
         self.running_time = self.config_loader.get_running_time()

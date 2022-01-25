@@ -6,11 +6,11 @@ import numpy as np
 import tempfile
 # import pandas as pd
 import os
-from configs.configLoader import ConfigLoader
+from configs.configLoader import configLoader
 
 def run_experiment():
 
-    config_loader = ConfigLoader()
+    config_loader = configLoader()
     ### kill existing monax programs
     print("starting ...")
     Popen("kill -9 $(ps -aux | grep Motor | awk '{print $2}')", shell=True)

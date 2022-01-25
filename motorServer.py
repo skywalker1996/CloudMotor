@@ -1,7 +1,7 @@
 # coding: utf-8
 
 import socket
-from configs.configLoader import ConfigLoader
+from configs.configLoader import configLoader
 from threading import Lock, Thread
 import json
 import time
@@ -13,7 +13,7 @@ class MotorServer:
 
     def __init__(self):
 
-        self.config_loader = ConfigLoader()
+        self.config_loader = configLoader()
 
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server_sock.bind(self.config_loader.get_server_address())
