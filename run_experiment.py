@@ -4,9 +4,9 @@ import socket
 
 import numpy as np
 import tempfile
-import pandas as pd
+# import pandas as pd
 import os
-from configs.ConfigLoader import ConfigLoader
+from configs.configLoader import ConfigLoader
 
 def run_experiment():
 
@@ -17,31 +17,29 @@ def run_experiment():
     time.sleep(2)
 
 
-    server_comds = 'python MotorServer.py'
-    client_comds = 'python MotorClient.py'
+    server_comds = 'python3 motorServer.py'
+    client_comds = 'python3 MotorClient.py'
 
     base_delay = config_loader.get_base_delay()
     use_trace = config_loader.get_use_trace()
     trace_file = config_loader.get_trace_path()
 
     if use_trace:
-        ### start monax client and server
+        ### start monax client and serve
         start_server = ['mm-delay', str(base_delay),
-                        # 'mm-link', trace_file, trace_file,
-                        # '--uplink-queue=droptail --uplink-queue-args=packets=2048',
-                        '--sh -c', f"'{server_comds}'"]
+                        'mm-link', trace_file, trace_file,
+                        '--uplink-queue=droptail --uplink-queue-args=packets=2048',
+                        '-- sh -c ', server_comds]
+
         start_server = ' '.join(start_server)
     else:
         start_server = server_comds
 
     start_client = client_comds
-
-
     # 	client = Popen(start_client, stdout=fileno, stderr=fileno, shell=True)
     # 	server = Popen(start_server, stdout=fileno, stderr=fileno, shell=True)
     client = Popen(start_client, shell=True)
     time.sleep(3)
-
     server = Popen(start_server, shell=True)
 
     print("experiment start success")

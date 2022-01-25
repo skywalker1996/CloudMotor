@@ -1,3 +1,5 @@
+# coding: utf-8
+
 import sys
 
 from motor import Motor
@@ -9,7 +11,7 @@ import matplotlib.pylab as plt
 import json
 import os
 
-from configs.ConfigLoader import ConfigLoader
+from configs.configLoader import ConfigLoader
 
 
 class MotorClient:
@@ -55,7 +57,7 @@ class MotorClient:
 
             progress = round(((time.time() - start_time) / self.running_time) * 100, 1)
             print("\r", end="")
-            print("Download progress: {}% ".format(progress), end="")
+            print("experiment progress: {}% ".format(progress), end="")
             sys.stdout.flush()
 
             if(time.time() - start_time >= self.running_time):

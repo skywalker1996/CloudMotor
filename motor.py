@@ -111,7 +111,7 @@ class Motor:
                 self._states, self._references = self._env.reset()
 
             # visualize environment. Red vertical lines indicate a constraint violation and therefore, a reset environment.
-            self._env.render()
+            # self._env.render()
 
             # action = env.action_space.sample()
             action = self._action
