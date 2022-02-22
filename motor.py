@@ -1,7 +1,7 @@
 import math
 import gym_electric_motor as gem
 from gym_electric_motor.reference_generators import ConstReferenceGenerator
-from utils import *
+from utils.utils import *
 from gym_electric_motor.visualization import MotorDashboard
 import matplotlib.pylab as plt
 from simple_pid import PID
@@ -10,18 +10,18 @@ import math
 from threading import Thread
 
 
-
 class Motor:
-    def __init__(self, id, rpm=4000):
+    def __init__(self, id, target_rpm=4000):
         self._id = id
 
         self._u_supply = 220
-        self._nominal_rpm = rpm
+        self._nominal_rpm = target_rpm
         self._nominal_i = 200
+
+        self._limit_factor = 3
 
         self._nominal_omega = round((self._nominal_rpm * 2 * math.pi) / 60, 2)
 
-        self._limit_factor = 3
         self._limit_rpm = self._limit_factor * self._nominal_rpm
         self._limit_omega = round((self._limit_rpm * 2 * math.pi) / 60, 2)
         self._limit_i = self._limit_factor * self._nominal_i
@@ -56,7 +56,8 @@ class Motor:
         )
 
         self._env = gem.make(  # define a PMSM with discrete action space
-            "Finite-SC-SeriesDc-v0",
+            # "Finite-SC-SeriesDc-v0",
+            "Cont-SC-SeriesDc-v0",
             # visualize the results
             visualization=self._motor_dashboard,
 
@@ -80,7 +81,8 @@ class Motor:
 
             # load=my_poly_static_load,
 
-            converter='Finite-2QC',
+            # converter='Finite-2QC',
+            converter = "Cont-4QC",
 
             ode_solver='euler',
 
@@ -93,7 +95,7 @@ class Motor:
         self._references = None
         self._processed_states = None
 
-        self._action = 0
+        self._action = self._env.action_space.sample()
 
         self.worker = Thread(target=self.motor_simulation, args=())
         self.worker.daemon = True
@@ -116,10 +118,9 @@ class Motor:
             # action = env.action_space.sample()
             action = self._action
 
-
             (self._states, self._references), rewards, done, _ = self._env.step(action)
             self._processed_states = self.process_states(self._states)
-            # print_state(self.state_filter, states, self.limit_values)
+            # print_state(self.state_filter, self._states, self.limit_values)
 
     def get_states(self):
         return self._processed_states
@@ -144,3 +145,6 @@ class Motor:
                 result[KEY_SPEED] = omega_to_speed(value)
 
         return result
+
+    def get_env(self):
+        return self._env

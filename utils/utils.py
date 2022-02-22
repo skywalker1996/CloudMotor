@@ -7,6 +7,7 @@ KEY_ADDRESS = "address"
 KEY_ACTION = "action"
 KEY_CLIENT_ID = "client_id"
 KEY_TYPE = "type"
+KEY_TIME = "time"
 
 TYPE_MONITOR = "monitor"
 TYPE_REGISTER = "register"

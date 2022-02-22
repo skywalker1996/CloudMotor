@@ -1,0 +1,13 @@
+configs: configs_cloud.yaml
+
+experiment:
+  use_trace: 0
+  trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/subset/report_bus_0001.log
+  base_delay: 10
+  control_interval: 0.2
+  running_time: 300
+
+
+
+
+

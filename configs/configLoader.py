@@ -15,18 +15,26 @@ class configLoader:
 
     def get_server_address(self):
         address = self.configs["server"]["address"]
-        return address["ip"], address["port"]
+        if(self.global_config["experiment"]["use_trace"]==1):
+            return address["ip"], address["port"]
+        else:
+            return address["local_ip"], address["port"]
 
     def get_client_address(self):
         address = self.configs["client"]["address"]
-        return address["ip"], address["port"]
+        if (self.global_config["experiment"]["use_trace"] == 1):
+            return address["ip"], address["port"]
+        else:
+            return address["local_ip"], address["port"]
+
 
     def get_register_address(self):
         address = self.configs["register"]["address"]
         return address["ip"], address["port"]
 
     def get_client_ip(self):
-        return self.configs["client"]["address"]["ip"]
+        ip, port = self.get_client_address()
+        return ip
 
     def get_trace_path(self):
         return self.global_config["experiment"]["trace"]

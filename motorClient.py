@@ -5,23 +5,26 @@ import sys
 from motor import Motor
 import time
 from simple_pid import PID
-from utils import *
+from utils.utils import *
 import socket
 import matplotlib.pylab as plt
 import json
 import os
+import argparse
 
 from configs.configLoader import configLoader
 
 
 class MotorClient:
 
-    def __init__(self, client_id, target_rpm):
+    def __init__(self, client_id, target_rpm, mark):
 
         self.client_id = client_id
         self.target_rpm = target_rpm
 
-        self.motor = Motor(self.client_id, rpm=self.target_rpm)
+        self.mark = mark
+
+        self.motor = Motor(id=self.client_id, target_rpm=self.target_rpm)
 
         self.config_loader = configLoader()
 
@@ -38,13 +41,13 @@ class MotorClient:
     def start(self):
         self.motor.start()
         start_time = time.time()
-        while(True):
+        while (True):
             time.sleep(self.control_interval)
             states = self.motor.get_states()
             if not states:
                 continue
 
-            self.upload_monitor_info(states[KEY_OMEGA], states[KEY_SPEED])
+            self.upload_monitor_info(states[KEY_OMEGA], states[KEY_SPEED], round(time.time()-start_time, 3))
             data = self.client_sock.recv(500).decode()
 
             try:
@@ -57,10 +60,10 @@ class MotorClient:
 
             progress = round(((time.time() - start_time) / self.running_time) * 100, 1)
             print("\r", end="")
-            print("experiment progress: {}% ".format(progress), end="")
+            print("experiment progress: {}% ".format(int(progress)), end="")
             sys.stdout.flush()
 
-            if(time.time() - start_time >= self.running_time):
+            if time.time() - start_time >= self.running_time:
                 break
         print("运行结束！")
         self.stop()
@@ -68,7 +71,7 @@ class MotorClient:
     def register(self):
 
         print("waiting for server signal...")
-        while(True):
+        while (True):
             data, address = self.client_sock.recvfrom(500)
             data = data.decode()
             try:
@@ -85,8 +88,10 @@ class MotorClient:
         pkt = json.dumps(register_data)
         self.client_sock.sendto(pkt.encode(), self.server_address)
 
-    def upload_monitor_info(self, omega, speed):
-        monitor_data = {"type": TYPE_MONITOR, KEY_CLIENT_ID: self.client_id, KEY_OMEGA: omega, KEY_SPEED: speed}
+    def upload_monitor_info(self, omega, speed, time):
+        monitor_data = {"type": TYPE_MONITOR, KEY_CLIENT_ID: self.client_id, KEY_OMEGA: omega,
+                        KEY_SPEED: speed, KEY_TIME: time}
+
         pkt = json.dumps(monitor_data)
         self.client_sock.sendto(pkt.encode(), self.server_address)
 
@@ -99,7 +104,15 @@ class MotorClient:
 
 
 if __name__ == "__main__":
-    motorClient = MotorClient("001", 4000)
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--id', default="001")
+    parser.add_argument('--target_speed', type=int, default=4000)
+    parser.add_argument('--mark', default="default")
+
+    args = parser.parse_args()
+
+    motorClient = MotorClient(args.id, args.target_speed, args.mark)
     motorClient.register()
     motorClient.start()
     sys.exit()
