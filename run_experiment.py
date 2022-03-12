@@ -9,6 +9,9 @@ import pandas as pd
 
 
 def run_experiment():
+    """
+    run experiment function
+    """
     config_loader = configLoader()
     # kill existing monax programs
     print("starting ...")
@@ -16,7 +19,7 @@ def run_experiment():
     time.sleep(2)
 
     server_comds = 'python3 motorServer.py'
-    client_comds = 'python3 motorClient.py --id 001 --target_speed 6000'
+    client_comds = 'python3 motorClient.py --id 001 --target_speed 3000'
 
     base_delay = config_loader.get_base_delay()
     use_trace = config_loader.get_use_trace()

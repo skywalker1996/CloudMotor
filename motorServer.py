@@ -14,7 +14,9 @@ import pandas as pd
 
 
 class MotorServer:
-
+    """
+    MotorServer
+    """
     def __init__(self):
 
         self.config_loader = configLoader()
@@ -34,11 +36,16 @@ class MotorServer:
         self._exit_flag = False
 
     def start(self):
-
+        """
+        start runnning
+        """
         self.control_thread.setDaemon(True)
         self.control_thread.start()
 
     def control_service(self):
+        """
+        control service
+        """
         print("start control service")
         start_client_data = json.dumps({"type": TYPE_START}).encode()
         self.server_sock.sendto(start_client_data, self.client_address)
@@ -53,19 +60,20 @@ class MotorServer:
                     client_address = data["address"]
                     target_rpm = data["target_rpm"]
                     target_omega = data["target_omega"]
-                    controller = PID(0.5, 0.3, 0.05, setpoint=target_omega)
+                    controller = PID(1, 0.5, 0.05, setpoint=target_omega)
                     controller.output_limits = (0, 1)
 
                     self.client_info[client_id] = {"address": tuple(client_address), "target_rpm": target_rpm,
                                                    "target_omega": target_omega, "controller": controller}
 
                     self.records[client_id] = {"sum": 0.0, "count": 0}
-                    self.logs[client_id] = {"time": [], "speed": []}
+                    self.logs[client_id] = {"time": [], "speed": [], "current":[]}
                     print(f"Motor client {client_id} from {client_address} connected, target_omega: {target_omega}")
                 elif data[KEY_TYPE] == TYPE_MONITOR:
                     client_id = data[KEY_CLIENT_ID]
                     state_omega = data[KEY_OMEGA]
                     state_speed = data[KEY_SPEED]
+                    state_current = data[KEY_CURRENT]
                     time = data[KEY_TIME]
                     if client_id in self.client_info:
                         # action = round(self.client_info[client_id]["controller"](state_omega))
@@ -77,6 +85,7 @@ class MotorServer:
                         self.records[client_id]["count"] += 1
                         self.logs[client_id]["time"].append(time)
                         self.logs[client_id]["speed"].append(state_speed)
+                        self.logs[client_id]["current"].append(state_current)
                     else:
                         print("motorClient 信息未注册！")
 
@@ -94,7 +103,9 @@ class MotorServer:
                 print(traceback.print_exc())
 
     def send_control_pkt(self, client_id, action):
-
+        """
+        send control packets
+        """
         client_address = self.client_info[client_id]["address"]
 
         control_data = {"type": TYPE_CONTROL, "action": action}
@@ -103,10 +114,15 @@ class MotorServer:
         self.server_sock.sendto(pkt, client_address)
 
     def get_exit_flag(self):
+        """
+        get exit flag
+        """
         return self._exit_flag
 
     def save_logs(self, client_id):
-
+        """
+        save logs
+        """
         save_dir = f"./logs/{self.time_mark}/{client_id}"
         current_log_dir = f"./logs/current_log"
         if not os.path.exists(save_dir):

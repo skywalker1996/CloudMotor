@@ -11,12 +11,15 @@ from threading import Thread
 
 
 class Motor:
-    def __init__(self, id, target_rpm=4000):
+    """
+    Motor Class
+    """
+    def __init__(self, id, nominal_rpm=4000):
         self._id = id
 
-        self._u_supply = 220
-        self._nominal_rpm = target_rpm
-        self._nominal_i = 200
+        self._u_supply = 80
+        self._nominal_rpm = nominal_rpm
+        self._nominal_i = 80
 
         self._limit_factor = 3
 
@@ -101,10 +104,15 @@ class Motor:
         self.worker.daemon = True
 
     def start(self):
+        """
+        start
+        """
         self.worker.start()
 
     def motor_simulation(self):
-
+        """
+        simulation
+        """
         done = True
         while (True):
             if done:

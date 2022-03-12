@@ -3,6 +3,7 @@ import socket
 
 KEY_OMEGA = 'omega'
 KEY_SPEED = 'speed'
+KEY_CURRENT = "i"
 KEY_ADDRESS = "address"
 KEY_ACTION = "action"
 KEY_CLIENT_ID = "client_id"

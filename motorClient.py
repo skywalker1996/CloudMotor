@@ -2,6 +2,8 @@
 
 import sys
 
+from simplejson import JSONDecodeError
+
 from motor import Motor
 import time
 from simple_pid import PID
@@ -16,7 +18,9 @@ from configs.configLoader import configLoader
 
 
 class MotorClient:
-
+    """
+    MotorClient
+    """
     def __init__(self, client_id, target_rpm, mark):
 
         self.client_id = client_id
@@ -24,7 +28,7 @@ class MotorClient:
 
         self.mark = mark
 
-        self.motor = Motor(id=self.client_id, target_rpm=self.target_rpm)
+        self.motor = Motor(id=self.client_id, nominal_rpm=self.target_rpm)
 
         self.config_loader = configLoader()
 
@@ -39,6 +43,9 @@ class MotorClient:
         self.client_sock.bind((self.client_address[0], self.client_address[1]))
 
     def start(self):
+        """
+        start MotorClient
+        """
         self.motor.start()
         start_time = time.time()
         while (True):
@@ -47,7 +54,7 @@ class MotorClient:
             if not states:
                 continue
 
-            self.upload_monitor_info(states[KEY_OMEGA], states[KEY_SPEED], round(time.time()-start_time, 3))
+            self.upload_monitor_info(states[KEY_OMEGA], states[KEY_SPEED], states[KEY_CURRENT], round(time.time()-start_time, 3))
             data = self.client_sock.recv(500).decode()
 
             try:
@@ -60,7 +67,7 @@ class MotorClient:
 
             progress = round(((time.time() - start_time) / self.running_time) * 100, 1)
             print("\r", end="")
-            print("experiment progress: {}% ".format(int(progress)), end="")
+            print(f"experiment progress: {int(progress)}% ", end="")
             sys.stdout.flush()
 
             if time.time() - start_time >= self.running_time:
@@ -69,7 +76,9 @@ class MotorClient:
         self.stop()
 
     def register(self):
-
+        """
+        send registry message
+        """
         print("waiting for server signal...")
         while (True):
             data, address = self.client_sock.recvfrom(500)
@@ -79,8 +88,8 @@ class MotorClient:
                 if data["type"] == TYPE_START:
                     self.server_address = address
                     break
-            except Exception as e:
-                print("数据包解析出错！", e)
+            except JSONDecodeError as json_error:
+                print("数据包解析出错！", json_error)
 
         register_data = {"type": TYPE_REGISTER, "client_id": self.client_id, "address": self.client_address,
                          "target_rpm": self.target_rpm, "target_omega": self.motor.get_nominal_values()[KEY_OMEGA]}
@@ -88,14 +97,20 @@ class MotorClient:
         pkt = json.dumps(register_data)
         self.client_sock.sendto(pkt.encode(), self.server_address)
 
-    def upload_monitor_info(self, omega, speed, time):
+    def upload_monitor_info(self, omega, speed, current, time):
+        """
+        upload monitor info
+        """
         monitor_data = {"type": TYPE_MONITOR, KEY_CLIENT_ID: self.client_id, KEY_OMEGA: omega,
-                        KEY_SPEED: speed, KEY_TIME: time}
+                        KEY_SPEED: speed, KEY_CURRENT: current, KEY_TIME: time}
 
         pkt = json.dumps(monitor_data)
         self.client_sock.sendto(pkt.encode(), self.server_address)
 
     def stop(self):
+        """
+        stop
+        """
         print("stopping ...")
         stop_msg = {"type": "stop", KEY_CLIENT_ID: self.client_id}
         pkt = json.dumps(stop_msg).encode()
