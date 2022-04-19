@@ -43,13 +43,20 @@ class configLoader:
         return self.global_config["experiment"]["base_delay"]
 
     def get_use_trace(self):
-        return True if self.global_config["experiment"]["use_trace"]==1 else False
+        return True if self.global_config["experiment"]["use_trace"]==True else False
 
     def get_control_interval(self):
         return self.global_config["experiment"]["control_interval"]
 
     def get_running_time(self):
         return self.global_config["experiment"]["running_time"]
+
+    def get_batch_experiment(self):
+        return self.global_config["experiment"]["batch_experiment"]
+
+    def get_redis_address(self):
+        address = self.configs["redis"]["address"]
+        return address["ip"], address["port"]
 
 
 if __name__ == "__main__":

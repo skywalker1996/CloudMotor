@@ -21,10 +21,11 @@ class MotorClient:
     """
     MotorClient
     """
-    def __init__(self, client_id, target_rpm, mark):
+    def __init__(self, client_id, target_rpm, mark, control_interval):
 
         self.client_id = client_id
         self.target_rpm = target_rpm
+        self.control_interval = control_interval
 
         self.mark = mark
 
@@ -32,9 +33,7 @@ class MotorClient:
 
         self.config_loader = configLoader()
 
-        self.control_interval = self.config_loader.get_control_interval()
         self.running_time = self.config_loader.get_running_time()
-
         self.client_address = self.config_loader.get_client_address()
         self.server_address = None
 
@@ -49,7 +48,7 @@ class MotorClient:
         self.motor.start()
         start_time = time.time()
         while (True):
-            time.sleep(self.control_interval)
+            time.sleep(self.control_interval/1000)
             states = self.motor.get_states()
             if not states:
                 continue
@@ -124,10 +123,11 @@ if __name__ == "__main__":
     parser.add_argument('--id', default="001")
     parser.add_argument('--target_speed', type=int, default=4000)
     parser.add_argument('--mark', default="default")
+    parser.add_argument('--interval', default=0.01, type=float)
 
     args = parser.parse_args()
 
-    motorClient = MotorClient(args.id, args.target_speed, args.mark)
+    motorClient = MotorClient(args.id, args.target_speed, args.mark, args.interval)
     motorClient.register()
     motorClient.start()
     sys.exit()

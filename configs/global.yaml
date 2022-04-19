@@ -1,12 +1,13 @@
 configs: configs_cloud.yaml
 
 experiment:
-  use_trace: 1
+  use_trace: true
   # trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/subset/report_bus_0001.log
   trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/static/96mbps.log
-  base_delay: 1
-  control_interval: 0.01
-  running_time: 10
+  base_delay: 20
+  control_interval: 5
+  running_time: 100
+  batch_experiment: false
 
 
 

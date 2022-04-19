@@ -10,6 +10,11 @@ client:
     ip: 172.30.38.194
     port: 9992
 
+redis:
+  address:
+    ip: 172.30.38.194
+    port: 6379
+
 
 
 

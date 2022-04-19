@@ -11,7 +11,7 @@ from utils.utils import *
 from simple_pid import PID
 import os
 import pandas as pd
-
+import redis
 
 class MotorServer:
     """
@@ -25,6 +25,9 @@ class MotorServer:
         print("bind ", self.config_loader.get_server_address())
         self.server_sock.bind(self.config_loader.get_server_address())
 
+        redis_addr =  self.config_loader.get_redis_address()
+        self.redis_client = redis.StrictRedis(host=redis_addr[0], port=redis_addr[1], db=0, decode_responses=True)
+    
         self.client_info = {}
         self.records = {}
         self.logs = {}
@@ -34,6 +37,12 @@ class MotorServer:
         self.client_address = self.config_loader.get_client_address()
 
         self._exit_flag = False
+
+        self.throughput = 0
+        self.THROUGHPUT_PERIOD = 1  # 1s
+
+        self.server_log = {}
+        self.server_log["throughput"] = []
 
     def start(self):
         """
@@ -49,6 +58,8 @@ class MotorServer:
         print("start control service")
         start_client_data = json.dumps({"type": TYPE_START}).encode()
         self.server_sock.sendto(start_client_data, self.client_address)
+        start_time = time.time()
+        control_data_total = 0
         while True:
             data = self.server_sock.recv(500).decode()
             try:
@@ -74,25 +85,35 @@ class MotorServer:
                     state_omega = data[KEY_OMEGA]
                     state_speed = data[KEY_SPEED]
                     state_current = data[KEY_CURRENT]
-                    time = data[KEY_TIME]
+                    timestamp = data[KEY_TIME]
                     if client_id in self.client_info:
                         # action = round(self.client_info[client_id]["controller"](state_omega))
                         action = self.client_info[client_id]["controller"](state_omega)
-                        self.send_control_pkt(client_id, [action])
+                        data_size = self.send_control_pkt(client_id, [action])
+                        control_data_total+=data_size
+                        if(time.time()-start_time >= self.THROUGHPUT_PERIOD):
+                            self.throughput = control_data_total
+                            self.server_log["throughput"].append(self.throughput)
+                            start_time = time.time()
+                            control_data_total = 0
+                            print(f"throughput:{self.throughput}")
 
                         omega_err_abs = abs(state_omega - self.client_info[client_id]["target_omega"])
                         self.records[client_id]["sum"] += omega_err_abs / self.client_info[client_id]["target_omega"]
                         self.records[client_id]["count"] += 1
-                        self.logs[client_id]["time"].append(time)
+                        self.logs[client_id]["time"].append(timestamp)
                         self.logs[client_id]["speed"].append(state_speed)
                         self.logs[client_id]["current"].append(state_current)
                     else:
                         print("motorClient 信息未注册！")
 
+
                 elif data[KEY_TYPE] == TYPE_STOP:
                     client_id = data[KEY_CLIENT_ID]
-                    qoe = round(self.records[client_id]["sum"] / self.records[client_id]["count"], 4)
-                    print(f"Motor Client {client_id} finished, 平均控制误差率 = {qoe * 100}%")
+                    avg_err = round(self.records[client_id]["sum"] / self.records[client_id]["count"], 4)
+                    self.avg_precision = 100-avg_err*100
+                    self.redis_client.set("result", self.avg_precision)
+                    print(f"Motor Client {client_id} finished, 平均控制精度 = {self.avg_precision}%")
                     self.save_logs(client_id)
                     del self.client_info[client_id]
                     del self.records[client_id]
@@ -112,6 +133,7 @@ class MotorServer:
         pkt = json.dumps(control_data).encode()
 
         self.server_sock.sendto(pkt, client_address)
+        return len(pkt)
 
     def get_exit_flag(self):
         """
@@ -131,13 +153,16 @@ class MotorServer:
             os.makedirs(current_log_dir)
 
         record_file = f"motor_{client_id}.csv"
-        dataframe = pd.DataFrame.from_dict(self.logs[client_id])
-
+        server_log_file = f"server_log.csv"
+        record_dataframe = pd.DataFrame.from_dict(self.logs[client_id])
         # save log in time marked folder
-        dataframe.to_csv(os.path.join(save_dir, record_file))
+        record_dataframe.to_csv(os.path.join(save_dir, record_file))
 
         # save log in current_log folder (keep updated)
-        dataframe.to_csv(os.path.join(current_log_dir, record_file))
+        record_dataframe.to_csv(os.path.join(current_log_dir, record_file))
+
+        server_log_dataframe = pd.DataFrame.from_dict(self.server_log)
+        server_log_dataframe.to_csv(os.path.join(current_log_dir, server_log_file))
 
         print("************* save logs in file: ", os.path.join(save_dir, record_file))
 
