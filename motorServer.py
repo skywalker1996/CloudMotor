@@ -8,6 +8,7 @@ from threading import Lock, Thread
 import json
 import time
 from utils.utils import *
+from utils.networkSim import NetworkSim
 from simple_pid import PID
 import os
 import pandas as pd
@@ -43,8 +44,9 @@ class MotorServer:
         self.THROUGHPUT_PERIOD = 1  # 1s
 
         self.server_log = {}
-        self.server_log["throughput"] = []
+        self.server_log[KEY_THROUGHPUT] = []
 
+        self.net_freq = 100
         self.send_queue = multiprocessing.Queue()
 
 
@@ -71,18 +73,18 @@ class MotorServer:
                 if KEY_TYPE not in data:
                     continue
                 if data[KEY_TYPE] == TYPE_REGISTER:
-                    client_id = data["client_id"]
-                    client_address = data["address"]
-                    target_rpm = data["target_rpm"]
-                    target_omega = data["target_omega"]
+                    client_id = data[KEY_CLIENT_ID]
+                    client_address = data[KEY_ADDRESS]
+                    target_rpm = data[KEY_TARGET_RPM]
+                    target_omega = data[KEY_TARGET_OMEGA]
                     controller = PID(1, 0.5, 0.05, setpoint=target_omega)
                     controller.output_limits = (0, 1)
 
-                    self.client_info[client_id] = {"address": tuple(client_address), "target_rpm": target_rpm,
-                                                   "target_omega": target_omega, "controller": controller}
+                    self.client_info[client_id] = {KEY_ADDRESS: tuple(client_address), KEY_TARGET_RPM: target_rpm,
+                                                   KEY_TARGET_OMEGA: target_omega, KEY_CONTROLLER: controller}
 
                     self.records[client_id] = {"sum": 0.0, "count": 0}
-                    self.logs[client_id] = {"time": [], "speed": [], "current":[]}
+                    self.logs[client_id] = {KEY_TIME: [], KEY_SPEED: [], KEY_CURRENT:[]}
                     print(f"Motor client {client_id} from {client_address} connected, target_omega: {target_omega}")
                     
                 elif data[KEY_TYPE] == TYPE_MONITOR:
@@ -93,22 +95,22 @@ class MotorServer:
                     timestamp = data[KEY_TIME]
                     if client_id in self.client_info:
                         # action = round(self.client_info[client_id]["controller"](state_omega))
-                        action = self.client_info[client_id]["controller"](state_omega)
+                        action = self.client_info[client_id][KEY_CONTROLLER](state_omega)
                         data_size = self.send_control_pkt(client_id, [action])
                         control_data_total+=data_size
                         if(time.time()-start_time >= self.THROUGHPUT_PERIOD):
                             self.throughput = control_data_total
-                            self.server_log["throughput"].append(self.throughput)
+                            self.server_log[KEY_THROUGHPUT].append(self.throughput)
                             start_time = time.time()
                             control_data_total = 0
                             print(f"throughput:{self.throughput}")
 
-                        omega_err_abs = abs(state_omega - self.client_info[client_id]["target_omega"])
-                        self.records[client_id]["sum"] += omega_err_abs / self.client_info[client_id]["target_omega"]
+                        omega_err_abs = abs(state_omega - self.client_info[client_id][KEY_TARGET_OMEGA])
+                        self.records[client_id]["sum"] += omega_err_abs / self.client_info[client_id][KEY_TARGET_OMEGA]
                         self.records[client_id]["count"] += 1
-                        self.logs[client_id]["time"].append(timestamp)
-                        self.logs[client_id]["speed"].append(state_speed)
-                        self.logs[client_id]["current"].append(state_current)
+                        self.logs[client_id][KEY_TIME].append(timestamp)
+                        self.logs[client_id][KEY_SPEED].append(state_speed)
+                        self.logs[client_id][KEY_CURRENT].append(state_current)
                     else:
                         print("motorClient 信息未注册！")
 
@@ -136,10 +138,16 @@ class MotorServer:
 
         control_data = {"type": TYPE_CONTROL, "action": action}
         pkt = json.dumps(control_data).encode()
-
         self.server_sock.sendto(pkt, client_address)
         return len(pkt)
 
+    # def pacer(self, send_queue):
+    #     networkSim = NetworkSim(10,10,0.01,0.01)
+    #     while(True):
+
+
+
+    
     def get_exit_flag(self):
         """
         get exit flag
