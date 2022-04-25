@@ -4,9 +4,9 @@ experiment:
   use_trace: true
   # trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/subset/report_bus_0001.log
   trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/static/96mbps.log
-  base_delay: 20
+  base_delay: 1
   control_interval: 5
-  running_time: 100
+  running_time: 30
   batch_experiment: false
 
 

@@ -12,6 +12,8 @@ from simple_pid import PID
 import os
 import pandas as pd
 import redis
+import multiprocessing
+import numpy as np
 
 class MotorServer:
     """
@@ -24,7 +26,6 @@ class MotorServer:
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print("bind ", self.config_loader.get_server_address())
         self.server_sock.bind(self.config_loader.get_server_address())
-
         redis_addr =  self.config_loader.get_redis_address()
         self.redis_client = redis.StrictRedis(host=redis_addr[0], port=redis_addr[1], db=0, decode_responses=True)
     
@@ -43,6 +44,9 @@ class MotorServer:
 
         self.server_log = {}
         self.server_log["throughput"] = []
+
+        self.send_queue = multiprocessing.Queue()
+
 
     def start(self):
         """
@@ -80,6 +84,7 @@ class MotorServer:
                     self.records[client_id] = {"sum": 0.0, "count": 0}
                     self.logs[client_id] = {"time": [], "speed": [], "current":[]}
                     print(f"Motor client {client_id} from {client_address} connected, target_omega: {target_omega}")
+                    
                 elif data[KEY_TYPE] == TYPE_MONITOR:
                     client_id = data[KEY_CLIENT_ID]
                     state_omega = data[KEY_OMEGA]
@@ -166,8 +171,8 @@ class MotorServer:
 
         print("************* save logs in file: ", os.path.join(save_dir, record_file))
 
-
-motor_server = MotorServer()
-motor_server.start()
-while not motor_server.get_exit_flag():
-    time.sleep(1)
+if __name__ == '__main__':
+    motor_server = MotorServer()
+    motor_server.start()
+    while not motor_server.get_exit_flag():
+        time.sleep(1)
