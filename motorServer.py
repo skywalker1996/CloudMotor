@@ -1,5 +1,6 @@
 # coding: utf-8
 
+from netrc import netrc
 import socket
 import traceback
 
@@ -15,6 +16,8 @@ import pandas as pd
 import redis
 import multiprocessing
 import numpy as np
+import queue
+import random
 
 class MotorServer:
     """
@@ -46,8 +49,10 @@ class MotorServer:
         self.server_log = {}
         self.server_log[KEY_THROUGHPUT] = []
 
-        self.net_freq = 100
+        self.networkSim = NetworkSim(10,10,0.03,0.02, update_freq = 100)
         self.send_queue = multiprocessing.Queue()
+        self.pacer_process = multiprocessing.Process(target=self.pacer, args=(self.send_queue, self.server_sock))
+
 
 
     def start(self):
@@ -56,6 +61,9 @@ class MotorServer:
         """
         self.control_thread.setDaemon(True)
         self.control_thread.start()
+
+        self.pacer_process.start()
+        self.pacer_process.join()
 
     def control_service(self):
         """
@@ -125,6 +133,7 @@ class MotorServer:
                     del self.client_info[client_id]
                     del self.records[client_id]
                     self._exit_flag = True
+                    self.send_queue.put(None)
                     break
 
             except Exception as e:
@@ -135,19 +144,42 @@ class MotorServer:
         send control packets
         """
         client_address = self.client_info[client_id]["address"]
-
         control_data = {"type": TYPE_CONTROL, "action": action}
         pkt = json.dumps(control_data).encode()
-        self.server_sock.sendto(pkt, client_address)
+
+        next_delay = self.networkSim.get_next_delay()
+        next_loss = self.networkSim.get_next_loss()
+
+        data = {}
+        data["address"] = client_address
+        data["send_time"] = time.time()*1000 + next_delay
+        data["loss_rate"] = next_loss
+        data['pkt'] = pkt
+        self.send_queue.put(data)
+        # self.server_sock.sendto(pkt, client_address)
         return len(pkt)
 
-    # def pacer(self, send_queue):
-    #     networkSim = NetworkSim(10,10,0.01,0.01)
-    #     while(True):
-
-
-
-    
+    def pacer(self, send_queue, send_sock):
+        
+        while(True):
+            data = send_queue.get()
+            if(not data):
+                break
+            address = data["address"]
+            send_time = data["send_time"]
+            loss_rate = data["loss_rate"]
+            pkt = data["pkt"]
+            while(time.time()*1000<send_time):
+                time.sleep(0.0001)
+                continue
+            # print(f"delay error = {time.time()*1000-send_time}")
+            if(random.uniform(0,1) >= 1-loss_rate):
+                print("loss a packet!")
+                loss_data = {"type": TYPE_LOSS}
+                pkt = json.dumps(loss_data).encode()
+            
+            send_sock.sendto(pkt, address)
+        
     def get_exit_flag(self):
         """
         get exit flag

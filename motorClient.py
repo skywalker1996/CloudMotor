@@ -58,7 +58,9 @@ class MotorClient:
 
             try:
                 data = json.loads(data)
-                if data["type"] == TYPE_CONTROL:
+                if(data["type"]==TYPE_LOSS):
+                    continue
+                elif data["type"] == TYPE_CONTROL:
                     action = data["action"]
                     self.motor.update_action(action)
             except Exception as e:

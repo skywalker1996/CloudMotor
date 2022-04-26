@@ -1,12 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 
 class NetworkSim:
     """
     NetworkSim
     """
-    def __init__(self, delay_mean, delay_var, loss_mean, loss_var):
+    def __init__(self, delay_mean, delay_var, loss_mean, loss_var, update_freq):
         self.delay_seq = np.random.normal(0, delay_var, 10000) + delay_mean
         self.loss_seq = np.random.normal(0, loss_var, 10000) + loss_mean
 
@@ -14,26 +15,35 @@ class NetworkSim:
         self.loss_seq = [round(abs(loss), 4) for loss in self.loss_seq]
 
         self.delay_max = 50
-        self.loss_max = 0.05
+        self.loss_max = 0.1
 
         self.delay_index = -1
         self.loss_index = -1
 
-    def get_next_delay(self):
+        self.update_freq = update_freq
 
-        if self.delay_index < len(self.delay_seq)-1:
-            self.delay_index += 1
-        else:
-            self.delay_index = 0
+        self.delay_start_time = time.time()*1000
+        self.loss_start_time = time.time()*1000
+
+    def get_next_delay(self):
+        
+        if time.time()*1000 - self.delay_start_time > self.update_freq:
+            if self.delay_index < len(self.delay_seq)-1:
+                self.delay_index += 1
+            else:
+                self.delay_index = 0
+            self.delay_start_time = time.time()*1000
 
         return min(self.delay_seq[self.delay_index], self.delay_max)
 
     def get_next_loss(self):
         
-        if self.loss_index < len(self.loss_seq)-1:
-            self.loss_index += 1
-        else:
-            self.loss_index = 0
+        if time.time()*1000 - self.loss_start_time > self.update_freq:
+            if self.loss_index < len(self.loss_seq)-1:
+                self.loss_index += 1
+            else:
+                self.loss_index = 0
+            self.loss_start_time = time.time()*1000
         
         return min(self.loss_seq[self.loss_index], self.loss_max)
 
@@ -62,9 +72,12 @@ class NetworkSim:
 
 if __name__ == '__main__':
 
-    networkSim = NetworkSim(10,10,0.01,0.01)
-    networkSim.plot_delay()
-    networkSim.plot_loss()
+    networkSim = NetworkSim(10,10,0.02,0.02,100)
+
+    for i in range(100):
+        print(networkSim.get_next_loss())
+        time.sleep(0.04)
+
     
     
     

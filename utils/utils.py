@@ -19,6 +19,7 @@ TYPE_REGISTER = "register"
 TYPE_CONTROL = "control"
 TYPE_START = "start"
 TYPE_STOP = "stop"
+TYPE_LOSS = "loss"
 
 
 def omega_to_speed(omega):

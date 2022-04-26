@@ -100,9 +100,7 @@ if __name__ == '__main__':
                     writer.writerow(fields)
                 if(pause_flag):
                     control_interval_start = 1
-                    pause_flag = False
     else:
-
         run_experiment(base_delay, use_trace, trace_file, control_interval)
                     
 
