@@ -49,7 +49,7 @@ class MotorServer:
         self.server_log = {}
         self.server_log[KEY_THROUGHPUT] = []
 
-        self.networkSim = NetworkSim(delay_mean = 50, loss_mean = 0, loss_var = 0, update_freq = 10)
+        self.networkSim = NetworkSim(delay_mean = 1, loss_mean = 0.05, update_freq = 1)
 
         self.host_name = socket.gethostname()
         self.redis_result_key = ':'.join(["motor",self.host_name,"result"])
@@ -60,16 +60,6 @@ class MotorServer:
         self.control_thread = Thread(target=self.control_service, args=())
         self.recv_thread = Thread(target=self.recv_service, args=())
         self.pacer_thread = Thread(target=self.pacer, args=())
-
-
-        # self.send_queue = multiprocessing.Queue()
-        # self.recv_queue = multiprocessing.Queue()
-
-        # self.control_thread = Thread(target=self.control_service, args=())
-        # self.recv_process = multiprocessing.Process(target=self.recv_service, args=(self.recv_queue, self.server_sock))
-        # self.pacer_process = multiprocessing.Process(target=self.pacer, args=(self.send_queue, self.server_sock))
-
-
 
     def start(self):
         """
@@ -89,10 +79,8 @@ class MotorServer:
 
     def recv_service(self):
         while True:
-            # time_start = time.time()*1000
             data = self.server_sock.recv(500).decode()
             self.recv_queue.put(data)
-            # print(f"recv state interval = {time.time()*1000 - time_start}")
 
     def control_service(self):
         """
@@ -104,9 +92,7 @@ class MotorServer:
         start_time = time.time()
         control_data_total = 0
         while True:
-            # time_start = time.time()*1000
             data = self.recv_queue.get()
-            # print(f"get state interval = {time.time()*1000 - time_start}")
             try:
                 data = json.loads(data)
                 if KEY_TYPE not in data:
@@ -116,7 +102,7 @@ class MotorServer:
                     client_address = data[KEY_ADDRESS]
                     target_rpm = data[KEY_TARGET_RPM]
                     target_omega = data[KEY_TARGET_OMEGA]
-                    controller = PID(2, 0, 0.1, setpoint=target_omega)
+                    controller = PID(8, 1, 1, setpoint=target_omega)
                     controller.output_limits = (0, 1)
 
                     self.client_info[client_id] = {KEY_ADDRESS: tuple(client_address), KEY_TARGET_RPM: target_rpm,
@@ -178,7 +164,7 @@ class MotorServer:
         pkt = json.dumps(control_data).encode()
 
         next_delay = self.networkSim.get_next_delay()
-        next_loss = self.networkSim.get_next_loss()
+        next_loss = self.networkSim.packet_loss()
 
         if self.use_trace:
             self.server_sock.sendto(pkt, client_address)
@@ -186,7 +172,7 @@ class MotorServer:
             data = {}
             data["address"] = client_address
             data["send_time"] = time.time()*1000 + next_delay
-            data["loss_rate"] = next_loss
+            data["packet_loss"] = next_loss
             data['pkt'] = pkt
             self.send_queue.put(data)
 
@@ -194,23 +180,21 @@ class MotorServer:
 
     def pacer(self): 
         while(True):
-            # time_start = time.time()*1000
             data = self.send_queue.get()
             if(not data):
                 break
             address = data["address"]
             send_time = data["send_time"]
-            loss_rate = data["loss_rate"]
+            packet_loss = data["packet_loss"]
             pkt = data["pkt"]
             while(time.time()*1000<send_time):
                 time.sleep(0.0001)
                 continue
-            # print(f"delay error = {time.time()*1000-send_time}")
-            if(random.uniform(0,1) >= 1-loss_rate):
-                loss_data = {"type": TYPE_LOSS}
-                pkt = json.dumps(loss_data).encode()
-            self.server_sock.sendto(pkt, address)
-            # print(f"send interval = {time.time()*1000 - time_start}")
+            if packet_loss:
+                continue
+            else:
+                self.server_sock.sendto(pkt, address)
+
         
     def get_exit_flag(self):
         """
