@@ -1,6 +1,6 @@
 from subprocess import Popen
 import time
-import socket
+import socket 
 from attr import field
 from matplotlib.pyplot import pause
 import numpy as np
@@ -20,6 +20,7 @@ def run_experiment(base_delay, use_trace, trace_file, control_interval):
     # kill existing programs
     print("starting ...")
     # Popen("kill -9 $(ps -aux | grep mm-delay | awk '{print $2}')", shell=True)
+    Popen("sh ./kill.sh", shell=True)
     time.sleep(2)
 
     server_comds = 'python3 motorServer.py'
@@ -63,17 +64,21 @@ if __name__ == '__main__':
     use_trace = config_loader.get_use_trace()
     trace_file = config_loader.get_trace_path()
 
+    host_name = socket.gethostname()
+    redis_result_key = ':'.join(["motor",host_name,"result"])
+
     BATCH_TEST = False
 
     if(BATCH_TEST):
+        record_file = "./results/dataset_03.csv"
         redis_addr = config_loader.get_redis_address()
         redis_client = redis.StrictRedis(host=redis_addr[0], port=redis_addr[1], db=0, decode_responses=True)
 
         results = []
 
-        headers = ["base_delay", "control_interval", "result"]
-        if(not os.path.exists("./results/model_A_dataset.csv")):
-            with open("./results/model_A_dataset.csv","a+") as f:
+        headers = ["base_delay", "base_loss", "control_interval", "result"]
+        if(not os.path.exists(record_file)):
+            with open(record_file,"a+") as f:
                 writer = csv.writer(f)
                 writer.writerow(headers)
         
@@ -86,20 +91,31 @@ if __name__ == '__main__':
         else:
             base_delay_start = 1
             control_interval_start = 1
-            
-        for base_delay in range(base_delay_start,51):
+        
+
+        # base_delay_set = list(range(1,51))
+        # control_interval_set = list(range(1,21))
+        
+        base_delay_set = [10,20,30,40,50]
+        control_interval_set = [1,10]
+        epoch = 10
+        
+        base_loss = 0
+
+        for base_delay in base_delay_set:
             redis_client.set("base_delay",base_delay)
-            for control_interval in range(control_interval_start,101):
+            for control_interval in control_interval_set:
                 redis_client.set("control_interval",control_interval)
                 print(f"base_delay: {base_delay}ms and control_interval: {control_interval}ms")
-                run_experiment(base_delay, use_trace, trace_file, control_interval)
-                result = float(redis_client.get("result"))
-                fields = [base_delay, control_interval, result]
-                with open("./results/model_A_dataset.csv","a+") as f:
-                    writer = csv.writer(f)
-                    writer.writerow(fields)
-                if(pause_flag):
-                    control_interval_start = 1
+                for i in range(epoch):
+                    run_experiment(base_delay, use_trace, trace_file, control_interval)
+                    result = float(redis_client.get(redis_result_key))
+                    fields = [base_delay, base_loss, control_interval, result]
+                    with open(record_file,"a+") as f:
+                        writer = csv.writer(f)
+                        writer.writerow(fields)
+                    if(pause_flag):
+                        control_interval_start = 1
     else:
         run_experiment(base_delay, use_trace, trace_file, control_interval)
                     

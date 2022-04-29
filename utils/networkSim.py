@@ -7,14 +7,18 @@ class NetworkSim:
     """
     NetworkSim
     """
-    def __init__(self, delay_mean, delay_var, loss_mean, loss_var, update_freq):
-        self.delay_seq = np.random.normal(0, delay_var, 10000) + delay_mean
-        self.loss_seq = np.random.normal(0, loss_var, 10000) + loss_mean
+    def __init__(self, delay_mean, loss_mean, loss_var, update_freq):
+
+
+        shape = 5
+        scale = delay_mean/shape
+        self.delay_seq = np.random.gamma(shape,scale,10000)
+        self.loss_seq = np.random.normal(loss_mean, loss_var, 10000) 
 
         self.delay_seq = [round(abs(delay),2) for delay in self.delay_seq]
         self.loss_seq = [round(abs(loss), 4) for loss in self.loss_seq]
 
-        self.delay_max = 50
+        self.delay_max = 1000
         self.loss_max = 0.1
 
         self.delay_index = -1
@@ -72,10 +76,10 @@ class NetworkSim:
 
 if __name__ == '__main__':
 
-    networkSim = NetworkSim(10,10,0.02,0.02,100)
+    networkSim = NetworkSim(50,50,0.0,0.0,1)
 
     for i in range(100):
-        print(networkSim.get_next_loss())
+        print(networkSim.get_next_delay())
         time.sleep(0.04)
 
     

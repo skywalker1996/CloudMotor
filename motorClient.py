@@ -13,6 +13,7 @@ import matplotlib.pylab as plt
 import json
 import os
 import argparse
+from threading import Lock, Thread
 
 from configs.configLoader import configLoader
 
@@ -41,21 +42,44 @@ class MotorClient:
         self.client_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.client_sock.bind((self.client_address[0], self.client_address[1]))
 
+        self.upload_thread = Thread(target=self.upload_service, args=())
+        self.control_thread = Thread(target=self.control_service, args=())
+
     def start(self):
+        self.upload_thread.setDaemon(True)
+        self.upload_thread.start()
+
+        self.control_thread.setDaemon(True)
+        self.control_thread.start()
+
+        self.upload_thread.join()
+        self.control_thread.join()
+
+    def upload_service(self):
         """
         start MotorClient
         """
         self.motor.start()
-        start_time = time.time()
+        self.start_time = time.time()
         while (True):
+            # time_1 = time.time()*1000
             time.sleep(self.control_interval/1000)
+            # print(f"sleep time = {time.time()*1000 - time_1}")
             states = self.motor.get_states()
             if not states:
                 continue
 
-            self.upload_monitor_info(states[KEY_OMEGA], states[KEY_SPEED], states[KEY_CURRENT], round(time.time()-start_time, 3))
-            data = self.client_sock.recv(500).decode()
+            self.upload_monitor_info(states[KEY_OMEGA], states[KEY_SPEED], states[KEY_CURRENT], round(time.time()-self.start_time, 3))
+            if time.time() - self.start_time >= self.running_time:
+                break
+        print("运行结束！")
+        self.stop()
 
+    def control_service(self):
+        while(True):
+            # time_start = time.time()*1000
+            data = self.client_sock.recv(500).decode()
+            # print(f"recv ctl interval = {time.time()*1000 - time_start}")
             try:
                 data = json.loads(data)
                 if(data["type"]==TYPE_LOSS):
@@ -66,31 +90,28 @@ class MotorClient:
             except Exception as e:
                 print("指令数据包解析出错！", e)
 
-            progress = round(((time.time() - start_time) / self.running_time) * 100, 1)
+            progress = round(((time.time() - self.start_time) / self.running_time) * 100, 1)
             print("\r", end="")
             print(f"experiment progress: {int(progress)}% ", end="")
             sys.stdout.flush()
 
-            if time.time() - start_time >= self.running_time:
+            if time.time() - self.start_time >= self.running_time:
                 break
-        print("运行结束！")
-        self.stop()
 
     def register(self):
         """
         send registry message
         """
         print("waiting for server signal...")
-        while (True):
-            data, address = self.client_sock.recvfrom(500)
-            data = data.decode()
-            try:
-                data = json.loads(data)
-                if data["type"] == TYPE_START:
-                    self.server_address = address
-                    break
-            except JSONDecodeError as json_error:
-                print("数据包解析出错！", json_error)
+
+        data, address = self.client_sock.recvfrom(500)
+        data = data.decode()
+        try:
+            data = json.loads(data)
+            if data["type"] == TYPE_START:
+                self.server_address = address
+        except JSONDecodeError as json_error:
+            print("数据包解析出错！", json_error)
 
         register_data = {"type": TYPE_REGISTER, "client_id": self.client_id, "address": self.client_address,
                          "target_rpm": self.target_rpm, "target_omega": self.motor.get_nominal_values()[KEY_OMEGA]}
@@ -125,7 +146,7 @@ if __name__ == "__main__":
     parser.add_argument('--id', default="001")
     parser.add_argument('--target_speed', type=int, default=4000)
     parser.add_argument('--mark', default="default")
-    parser.add_argument('--interval', default=0.01, type=float)
+    parser.add_argument('--interval', default=5, type=float)
 
     args = parser.parse_args()
 

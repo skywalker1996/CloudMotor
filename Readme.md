@@ -8,7 +8,9 @@
 
 > pip install -r requirements 
 
-3. 下载仿真平台代码
+3. Redis安装 
+
+4. 下载仿真平台代码
 
 > git clone git@github.com:skywalker1996/CloudMotor.git
 

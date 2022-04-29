@@ -37,9 +37,9 @@ class MotorServer:
         self.records = {}
         self.logs = {}
 
-        self.control_thread = Thread(target=self.control_service, args=())
-
         self.client_address = self.config_loader.get_client_address()
+
+        self.use_trace = self.config_loader.get_use_trace()
 
         self._exit_flag = False
 
@@ -49,9 +49,25 @@ class MotorServer:
         self.server_log = {}
         self.server_log[KEY_THROUGHPUT] = []
 
-        self.networkSim = NetworkSim(10,10,0.03,0.02, update_freq = 100)
-        self.send_queue = multiprocessing.Queue()
-        self.pacer_process = multiprocessing.Process(target=self.pacer, args=(self.send_queue, self.server_sock))
+        self.networkSim = NetworkSim(delay_mean = 50, loss_mean = 0, loss_var = 0, update_freq = 10)
+
+        self.host_name = socket.gethostname()
+        self.redis_result_key = ':'.join(["motor",self.host_name,"result"])
+
+        self.send_queue = queue.Queue()
+        self.recv_queue = queue.Queue()
+
+        self.control_thread = Thread(target=self.control_service, args=())
+        self.recv_thread = Thread(target=self.recv_service, args=())
+        self.pacer_thread = Thread(target=self.pacer, args=())
+
+
+        # self.send_queue = multiprocessing.Queue()
+        # self.recv_queue = multiprocessing.Queue()
+
+        # self.control_thread = Thread(target=self.control_service, args=())
+        # self.recv_process = multiprocessing.Process(target=self.recv_service, args=(self.recv_queue, self.server_sock))
+        # self.pacer_process = multiprocessing.Process(target=self.pacer, args=(self.send_queue, self.server_sock))
 
 
 
@@ -59,11 +75,24 @@ class MotorServer:
         """
         start runnning
         """
-        self.control_thread.setDaemon(True)
+        self.control_thread.daemon = True
         self.control_thread.start()
 
-        self.pacer_process.start()
-        self.pacer_process.join()
+        self.recv_thread.daemon = True
+        self.recv_thread.start()
+        
+        if not self.use_trace:
+            self.pacer_thread.daemon = True
+            self.pacer_thread.start()
+            
+        self.control_thread.join()
+
+    def recv_service(self):
+        while True:
+            # time_start = time.time()*1000
+            data = self.server_sock.recv(500).decode()
+            self.recv_queue.put(data)
+            # print(f"recv state interval = {time.time()*1000 - time_start}")
 
     def control_service(self):
         """
@@ -75,7 +104,9 @@ class MotorServer:
         start_time = time.time()
         control_data_total = 0
         while True:
-            data = self.server_sock.recv(500).decode()
+            # time_start = time.time()*1000
+            data = self.recv_queue.get()
+            # print(f"get state interval = {time.time()*1000 - time_start}")
             try:
                 data = json.loads(data)
                 if KEY_TYPE not in data:
@@ -85,7 +116,7 @@ class MotorServer:
                     client_address = data[KEY_ADDRESS]
                     target_rpm = data[KEY_TARGET_RPM]
                     target_omega = data[KEY_TARGET_OMEGA]
-                    controller = PID(1, 0.5, 0.05, setpoint=target_omega)
+                    controller = PID(2, 0, 0.1, setpoint=target_omega)
                     controller.output_limits = (0, 1)
 
                     self.client_info[client_id] = {KEY_ADDRESS: tuple(client_address), KEY_TARGET_RPM: target_rpm,
@@ -111,7 +142,7 @@ class MotorServer:
                             self.server_log[KEY_THROUGHPUT].append(self.throughput)
                             start_time = time.time()
                             control_data_total = 0
-                            print(f"throughput:{self.throughput}")
+                            # print(f"throughput:{self.throughput}")
 
                         omega_err_abs = abs(state_omega - self.client_info[client_id][KEY_TARGET_OMEGA])
                         self.records[client_id]["sum"] += omega_err_abs / self.client_info[client_id][KEY_TARGET_OMEGA]
@@ -122,12 +153,11 @@ class MotorServer:
                     else:
                         print("motorClient 信息未注册！")
 
-
                 elif data[KEY_TYPE] == TYPE_STOP:
                     client_id = data[KEY_CLIENT_ID]
                     avg_err = round(self.records[client_id]["sum"] / self.records[client_id]["count"], 4)
                     self.avg_precision = 100-avg_err*100
-                    self.redis_client.set("result", self.avg_precision)
+                    self.redis_client.set(self.redis_result_key, self.avg_precision)
                     print(f"Motor Client {client_id} finished, 平均控制精度 = {self.avg_precision}%")
                     self.save_logs(client_id)
                     del self.client_info[client_id]
@@ -150,19 +180,22 @@ class MotorServer:
         next_delay = self.networkSim.get_next_delay()
         next_loss = self.networkSim.get_next_loss()
 
-        data = {}
-        data["address"] = client_address
-        data["send_time"] = time.time()*1000 + next_delay
-        data["loss_rate"] = next_loss
-        data['pkt'] = pkt
-        self.send_queue.put(data)
-        # self.server_sock.sendto(pkt, client_address)
+        if self.use_trace:
+            self.server_sock.sendto(pkt, client_address)
+        else:
+            data = {}
+            data["address"] = client_address
+            data["send_time"] = time.time()*1000 + next_delay
+            data["loss_rate"] = next_loss
+            data['pkt'] = pkt
+            self.send_queue.put(data)
+
         return len(pkt)
 
-    def pacer(self, send_queue, send_sock):
-        
+    def pacer(self): 
         while(True):
-            data = send_queue.get()
+            # time_start = time.time()*1000
+            data = self.send_queue.get()
             if(not data):
                 break
             address = data["address"]
@@ -174,11 +207,10 @@ class MotorServer:
                 continue
             # print(f"delay error = {time.time()*1000-send_time}")
             if(random.uniform(0,1) >= 1-loss_rate):
-                print("loss a packet!")
                 loss_data = {"type": TYPE_LOSS}
                 pkt = json.dumps(loss_data).encode()
-            
-            send_sock.sendto(pkt, address)
+            self.server_sock.sendto(pkt, address)
+            # print(f"send interval = {time.time()*1000 - time_start}")
         
     def get_exit_flag(self):
         """
@@ -214,5 +246,5 @@ class MotorServer:
 if __name__ == '__main__':
     motor_server = MotorServer()
     motor_server.start()
-    while not motor_server.get_exit_flag():
-        time.sleep(1)
+    # while not motor_server.get_exit_flag():
+    #     time.sleep(1)

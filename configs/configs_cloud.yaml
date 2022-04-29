@@ -12,7 +12,7 @@ client:
 
 redis:
   address:
-    ip: 172.30.38.194
+    ip: 47.101.194.15
     port: 6379
 
 

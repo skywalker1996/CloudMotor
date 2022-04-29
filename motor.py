@@ -8,6 +8,7 @@ from simple_pid import PID
 from gym_electric_motor.physical_systems.mechanical_loads import PolynomialStaticLoad
 import math
 from threading import Thread
+import time
 
 
 class Motor:
@@ -115,6 +116,7 @@ class Motor:
         """
         done = True
         while (True):
+            time.sleep(0.0001)
             if done:
                 # Reset the environment
                 # This is required initally or after an episode end due to a constraint violation in the env.
@@ -122,7 +124,7 @@ class Motor:
 
             # visualize environment. Red vertical lines indicate a constraint violation and therefore, a reset environment.
             # self._env.render()
-
+            
             # action = env.action_space.sample()
             action = self._action
 
