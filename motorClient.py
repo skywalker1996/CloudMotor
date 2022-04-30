@@ -102,7 +102,7 @@ class MotorClient:
         """
         send registry message
         """
-        print("waiting for server signal...")
+        # print("waiting for server signal...")
 
         data, address = self.client_sock.recvfrom(500)
         data = data.decode()

@@ -1,5 +1,6 @@
 # coding: utf-8
 
+from curses import delay_output
 from netrc import netrc
 import socket
 import traceback
@@ -18,17 +19,19 @@ import multiprocessing
 import numpy as np
 import queue
 import random
+import argparse
+
 
 class MotorServer:
     """
     MotorServer
     """
-    def __init__(self):
+    def __init__(self, delay_mean, loss_mean):
 
         self.config_loader = configLoader()
         self.time_mark = str(time.strftime('%Y_%m_%d_%H_%M_%S', time.localtime(time.time())))
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        print("bind ", self.config_loader.get_server_address())
+        # print("bind ", self.config_loader.get_server_address())
         self.server_sock.bind(self.config_loader.get_server_address())
         redis_addr =  self.config_loader.get_redis_address()
         self.redis_client = redis.StrictRedis(host=redis_addr[0], port=redis_addr[1], db=0, decode_responses=True)
@@ -49,7 +52,7 @@ class MotorServer:
         self.server_log = {}
         self.server_log[KEY_THROUGHPUT] = []
 
-        self.networkSim = NetworkSim(delay_mean = 1, loss_mean = 0.05, update_freq = 1)
+        self.networkSim = NetworkSim(delay_mean, loss_mean, update_freq = 5)
 
         self.host_name = socket.gethostname()
         self.redis_result_key = ':'.join(["motor",self.host_name,"result"])
@@ -86,7 +89,7 @@ class MotorServer:
         """
         control service
         """
-        print("start control service")
+        # print("start control service")
         start_client_data = json.dumps({"type": TYPE_START}).encode()
         self.server_sock.sendto(start_client_data, self.client_address)
         start_time = time.time()
@@ -228,7 +231,15 @@ class MotorServer:
         print("************* save logs in file: ", os.path.join(save_dir, record_file))
 
 if __name__ == '__main__':
-    motor_server = MotorServer()
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--delay_mean', type=float, default=0)
+    parser.add_argument('--loss_mean', type=float, default=0)
+
+    args = parser.parse_args()
+
+    motor_server = MotorServer(delay_mean = args.delay_mean, loss_mean = args.loss_mean)
     motor_server.start()
     # while not motor_server.get_exit_flag():
     #     time.sleep(1)
