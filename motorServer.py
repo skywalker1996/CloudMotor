@@ -26,10 +26,13 @@ class MotorServer:
     """
     MotorServer
     """
-    def __init__(self, delay_mean, loss_mean):
+    def __init__(self, delay_mean, loss_mean, name):
 
         self.config_loader = configLoader()
-        self.time_mark = str(time.strftime('%Y_%m_%d_%H_%M_%S', time.localtime(time.time())))
+        self.experiment_name = name 
+        self.delay_mean = delay_mean
+        self.loss_mean = loss_mean
+
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # print("bind ", self.config_loader.get_server_address())
         self.server_sock.bind(self.config_loader.get_server_address())
@@ -110,9 +113,10 @@ class MotorServer:
 
                     self.client_info[client_id] = {KEY_ADDRESS: tuple(client_address), KEY_TARGET_RPM: target_rpm,
                                                    KEY_TARGET_OMEGA: target_omega, KEY_CONTROLLER: controller}
-
-                    self.records[client_id] = {"sum": 0.0, "count": 0}
-                    self.logs[client_id] = {KEY_TIME: [], KEY_SPEED: [], KEY_CURRENT:[]}
+                        
+                    
+                    self.records[client_id] = {"sum": 0.0, "omega_err": [], "count": 0}
+                    self.logs[client_id] = {KEY_TIME: [], KEY_SPEED: [], KEY_OMEGA: [], KEY_CURRENT: [], KEY_OMEGA_ERR: []}
                     print(f"Motor client {client_id} from {client_address} connected, target_omega: {target_omega}")
                     
                 elif data[KEY_TYPE] == TYPE_MONITOR:
@@ -134,19 +138,29 @@ class MotorServer:
                             # print(f"throughput:{self.throughput}")
 
                         omega_err_abs = abs(state_omega - self.client_info[client_id][KEY_TARGET_OMEGA])
-                        self.records[client_id]["sum"] += omega_err_abs / self.client_info[client_id][KEY_TARGET_OMEGA]
-                        self.records[client_id]["count"] += 1
+                        if(timestamp >= 1):
+                            self.records[client_id]["sum"] += omega_err_abs / self.client_info[client_id][KEY_TARGET_OMEGA]
+                            self.records[client_id]["count"] += 1
+                            self.records[client_id]["omega_err"].append(omega_err_abs)
+                            
+
                         self.logs[client_id][KEY_TIME].append(timestamp)
                         self.logs[client_id][KEY_SPEED].append(state_speed)
+                        self.logs[client_id][KEY_OMEGA].append(state_omega)
+                        self.logs[client_id][KEY_OMEGA_ERR].append(omega_err_abs)
                         self.logs[client_id][KEY_CURRENT].append(state_current)
+                        
                     else:
                         print("motorClient 信息未注册！")
 
                 elif data[KEY_TYPE] == TYPE_STOP:
                     client_id = data[KEY_CLIENT_ID]
+
                     avg_err = round(self.records[client_id]["sum"] / self.records[client_id]["count"], 4)
                     self.avg_precision = 100-avg_err*100
-                    self.redis_client.set(self.redis_result_key, self.avg_precision)
+                    self.precision_sla = self.sla_comp(self.records[client_id]["omega_err"], self.client_info[client_id][KEY_TARGET_OMEGA])
+                    self.precision_sla.append(self.avg_precision)
+                    self.redis_client.set(self.redis_result_key, str(self.precision_sla))
                     print(f"Motor Client {client_id} finished, 平均控制精度 = {self.avg_precision}%")
                     self.save_logs(client_id)
                     del self.client_info[client_id]
@@ -157,6 +171,25 @@ class MotorServer:
 
             except Exception as e:
                 print(traceback.print_exc())
+
+    def sla_comp(self, omega_err_seq, target_omega):
+        
+        sorted_seq = sorted(omega_err_seq)
+        total_count = len(sorted_seq)
+        results = []
+
+        for p in range(90,100):
+            index = int(total_count * (p/100.0))
+            omega_err_abs = sorted_seq[index]
+            err_rate = omega_err_abs / target_omega
+            # print(f"index = {index} and omega_err_abs = {omega_err_abs} and err_rate = {err_rate} ")
+            precision = 100-err_rate*100
+            results.append(precision)
+        
+        return results
+
+            
+
 
     def send_control_pkt(self, client_id, action):
         """
@@ -207,28 +240,26 @@ class MotorServer:
 
     def save_logs(self, client_id):
         """
-        save logs
+        save records
         """
-        save_dir = f"./logs/{self.time_mark}/{client_id}"
-        current_log_dir = f"./logs/current_log"
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        if not os.path.exists(current_log_dir):
-            os.makedirs(current_log_dir)
+        record_dir = f"./logs/{self.experiment_name}"
+        current_record_dir = f"./logs/current_record"
 
-        record_file = f"motor_{client_id}.csv"
-        server_log_file = f"server_log.csv"
+        if not os.path.exists(record_dir):
+            os.makedirs(record_dir)
+        if not os.path.exists(current_record_dir):
+            os.makedirs(current_record_dir)
+        
+        record_file = f"{self.delay_mean}_{self.loss_mean}_record.csv"
+        current_record_file = f"motor_{client_id}.csv"
+
         record_dataframe = pd.DataFrame.from_dict(self.logs[client_id])
-        # save log in time marked folder
-        record_dataframe.to_csv(os.path.join(save_dir, record_file))
+        # save record in time marked folder
+        record_dataframe.to_csv(os.path.join(record_dir, record_file))
+        # save record in current_record folder (keep updated)
+        record_dataframe.to_csv(os.path.join(current_record_dir, current_record_file))
 
-        # save log in current_log folder (keep updated)
-        record_dataframe.to_csv(os.path.join(current_log_dir, record_file))
-
-        server_log_dataframe = pd.DataFrame.from_dict(self.server_log)
-        server_log_dataframe.to_csv(os.path.join(current_log_dir, server_log_file))
-
-        print("************* save logs in file: ", os.path.join(save_dir, record_file))
+        print("************* save records in file: ", os.path.join(record_dir, record_file))
 
 if __name__ == '__main__':
 
@@ -236,10 +267,11 @@ if __name__ == '__main__':
 
     parser.add_argument('--delay_mean', type=float, default=0)
     parser.add_argument('--loss_mean', type=float, default=0)
+    parser.add_argument('--name', type=str, default="default")
 
     args = parser.parse_args()
 
-    motor_server = MotorServer(delay_mean = args.delay_mean, loss_mean = args.loss_mean)
+    motor_server = MotorServer(delay_mean = args.delay_mean, loss_mean = args.loss_mean, name = args.name)
     motor_server.start()
     # while not motor_server.get_exit_flag():
     #     time.sleep(1)

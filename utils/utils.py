@@ -2,6 +2,7 @@ import math
 import socket
 
 KEY_OMEGA = 'omega'
+KEY_OMEGA_ERR = 'omega_errs'
 KEY_SPEED = 'speed'
 KEY_CURRENT = "i"
 KEY_ADDRESS = "address"

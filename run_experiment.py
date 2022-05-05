@@ -18,6 +18,8 @@ def run_experiment(delay_mean, loss_mean, control_interval):
     run experiment function
     """
 
+    experiment_name = "001"
+
     config_loader = configLoader()
     use_trace = config_loader.get_use_trace()
     trace_file = config_loader.get_trace_path()
@@ -29,7 +31,7 @@ def run_experiment(delay_mean, loss_mean, control_interval):
     Popen("sh ./kill.sh", shell=True, stdout=PIPE, stderr=PIPE)
     time.sleep(2)
 
-    server_comds = f'python3 motorServer.py --delay_mean {delay_mean} --loss_mean {loss_mean}'
+    server_comds = f'python3 motorServer.py --delay_mean {delay_mean} --loss_mean {loss_mean} --name {experiment_name}'
     client_comds = f'python3 motorClient.py --id 001 --target_speed 3000 --interval {control_interval}'
 
     if use_trace:
@@ -76,17 +78,19 @@ if __name__ == '__main__':
         redis_addr = config_loader.get_redis_address()
         redis_client = redis.StrictRedis(host=redis_addr[0], port=redis_addr[1], db=0, decode_responses=True)
 
-        headers = ["delay_mean", "loss_mean", "control_interval", "result"]
+        headers = ["delay_mean", "loss_mean", "control_interval"]
+        headers.extend([f"sla({i}%)" for i in range(90,100)])
+        headers.append("avg_precision")
         if(not os.path.exists(record_file)):
             with open(record_file,"a+") as f:
                 writer = csv.writer(f)
                 writer.writerow(headers)
 
         # 批量实验参数
-        delay_mean_set = [10,20,30,40,50]
-        loss_mean_set = [0.1,0.2,0.3,0.4,0.5]
+        delay_mean_set = list(range(0,101,5))
+        loss_mean_set = [i/100.0 for i in list(range(5,51,5))]
         control_interval_set = [10]
-        epoch = 2
+        epoch = 1
         
         count = 0
         for delay_mean in delay_mean_set:
@@ -96,8 +100,10 @@ if __name__ == '__main__':
                     for i in range(epoch):
                         print(f"\n=> epoch {i}")
                         run_experiment(delay_mean, loss_mean, control_interval)
-                        result = float(redis_client.get(redis_result_key))
-                        fields = [delay_mean, loss_mean, control_interval, result]
+                        result = eval(redis_client.get(redis_result_key))
+                        fields = [delay_mean, loss_mean, control_interval]
+                        fields.extend(result)
+
                         with open(record_file,"a+") as f:
                             writer = csv.writer(f)
                             writer.writerow(fields)

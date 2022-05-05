@@ -5,7 +5,7 @@ experiment:
   # trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/subset/report_bus_0001.log
   trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/static/96mbps.log
   base_delay: 50
-  running_time: 5
+  running_time: 120
   batch_experiment: false
 
 
