@@ -26,12 +26,14 @@ class MotorServer:
     """
     MotorServer
     """
-    def __init__(self, delay_mean, loss_mean, name):
+    def __init__(self, delay_mean, loss_mean, interval):
 
         self.config_loader = configLoader()
-        self.experiment_name = name 
         self.delay_mean = delay_mean
         self.loss_mean = loss_mean
+
+        self.name = self.config_loader.get_experiment_name()
+        self.control_interval = interval
 
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # print("bind ", self.config_loader.get_server_address())
@@ -45,7 +47,7 @@ class MotorServer:
 
         self.client_address = self.config_loader.get_client_address()
 
-        self.use_trace = self.config_loader.get_use_trace()
+        self.use_mahimahi = self.config_loader.get_use_mahimahi()
 
         self._exit_flag = False
 
@@ -77,7 +79,7 @@ class MotorServer:
         self.recv_thread.daemon = True
         self.recv_thread.start()
         
-        if not self.use_trace:
+        if not self.use_mahimahi:
             self.pacer_thread.daemon = True
             self.pacer_thread.start()
             
@@ -201,7 +203,7 @@ class MotorServer:
         next_delay = self.networkSim.get_next_delay()
         next_loss = self.networkSim.packet_loss()
 
-        if self.use_trace:
+        if self.use_mahimahi:
             self.server_sock.sendto(pkt, client_address)
         else:
             data = {}
@@ -241,7 +243,7 @@ class MotorServer:
         """
         save records
         """
-        record_dir = f"./logs/{self.experiment_name}"
+        record_dir = f"./logs/{self.name}"
         current_record_dir = f"./logs/current_record"
 
         if not os.path.exists(record_dir):
@@ -249,7 +251,7 @@ class MotorServer:
         if not os.path.exists(current_record_dir):
             os.makedirs(current_record_dir)
         
-        record_file = f"{self.delay_mean}_{self.loss_mean}_record.csv"
+        record_file = f"{self.delay_mean}_{self.loss_mean}_{self.control_interval}_record.csv"
         current_record_file = f"motor_{client_id}.csv"
 
         record_dataframe = pd.DataFrame.from_dict(self.logs[client_id])
@@ -266,11 +268,11 @@ if __name__ == '__main__':
 
     parser.add_argument('--delay_mean', type=float, default=0)
     parser.add_argument('--loss_mean', type=float, default=0)
-    parser.add_argument('--name', type=str, default="default")
+    parser.add_argument('--interval', type=float, default=5)
 
     args = parser.parse_args()
 
-    motor_server = MotorServer(delay_mean = args.delay_mean, loss_mean = args.loss_mean, name = args.name)
+    motor_server = MotorServer(delay_mean = args.delay_mean, loss_mean = args.loss_mean, interval = args.interval)
     motor_server.start()
     # while not motor_server.get_exit_flag():
     #     time.sleep(1)

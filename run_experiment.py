@@ -18,10 +18,8 @@ def run_experiment(delay_mean, loss_mean, control_interval):
     run experiment function
     """
 
-    experiment_name = "001"
-
     config_loader = configLoader()
-    use_trace = config_loader.get_use_trace()
+    use_trace = config_loader.get_use_mahimahi()
     trace_file = config_loader.get_trace_path()
     base_delay = config_loader.get_base_delay()
 
@@ -31,7 +29,7 @@ def run_experiment(delay_mean, loss_mean, control_interval):
     Popen("sh ./kill.sh", shell=True, stdout=PIPE, stderr=PIPE)
     time.sleep(2)
 
-    server_comds = f'python3 motorServer.py --delay_mean {delay_mean} --loss_mean {loss_mean} --name {experiment_name}'
+    server_comds = f'python3 motorServer.py --delay_mean {delay_mean} --loss_mean {loss_mean} --interval {control_interval}'
     client_comds = f'python3 motorClient.py --id 001 --target_speed 3000 --interval {control_interval}'
 
     if use_trace:
@@ -71,26 +69,26 @@ if __name__ == '__main__':
     host_name = socket.gethostname()
     redis_result_key = ':'.join(["motor",host_name,"result"])
 
-    BATCH_TEST = True
+    batch_experiment = config_loader.get_batch_experiment()
 
-    if(BATCH_TEST):
-        record_file = "./results/datasets/dataset_03.csv"
+    if(batch_experiment):
+        result_file = f"./results/datasets/{config_loader.get_experiment_name()}.csv"
         redis_addr = config_loader.get_redis_address()
         redis_client = redis.StrictRedis(host=redis_addr[0], port=redis_addr[1], db=0, decode_responses=True)
 
         headers = ["delay_mean", "loss_mean", "control_interval"]
         headers.extend([f"sla({i}%)" for i in range(90,100)])
         headers.append("avg_precision")
-        if(not os.path.exists(record_file)):
-            with open(record_file,"a+") as f:
+        if(not os.path.exists(result_file)):
+            with open(result_file,"a+") as f:
                 writer = csv.writer(f)
                 writer.writerow(headers)
 
         # 批量实验参数
-        delay_mean_set = list(range(0, 101, 5))
-        loss_mean_set = [i/100.0 for i in list(range(5,51,5))]
-        control_interval_set = [10]
-        epoch = 1
+        delay_mean_set = config_loader.get_delay_mean_set()
+        loss_mean_set = config_loader.get_loss_mean_set()
+        control_interval_set = config_loader.get_control_interval_set()
+        epoch = config_loader.get_epoch()
         
         count = 0
         for delay_mean in delay_mean_set:
@@ -104,7 +102,7 @@ if __name__ == '__main__':
                         fields = [delay_mean, loss_mean, control_interval]
                         fields.extend(result)
 
-                        with open(record_file,"a+") as f:
+                        with open(result_file,"a+") as f:
                             writer = csv.writer(f)
                             writer.writerow(fields)
                     count += 1
