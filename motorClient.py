@@ -4,7 +4,7 @@ import sys
 
 from simplejson import JSONDecodeError
 
-from motor import Motor
+from model.motor import Motor
 import time
 from simple_pid import PID
 from utils.utils import *

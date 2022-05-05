@@ -143,7 +143,6 @@ class MotorServer:
                             self.records[client_id]["count"] += 1
                             self.records[client_id]["omega_err"].append(omega_err_abs)
                             
-
                         self.logs[client_id][KEY_TIME].append(timestamp)
                         self.logs[client_id][KEY_SPEED].append(state_speed)
                         self.logs[client_id][KEY_OMEGA].append(state_omega)

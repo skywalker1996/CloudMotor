@@ -48,11 +48,11 @@ class NetworkSim:
         plt.figure(figsize=(8,6)) 
         plt.xlabel("Delay (ms)")   
         plt.ylabel("Prob")    
-        plt.title("Example")   
+        plt.title("Delay Sequence")   
         res = plt.hist(self.delay_seq, 50, density=1, stacked=True)
         plt.plot(res[1][:-1], res[0], linewidth=3)
         # plt.plot(list(range(len(self.delay_seq))), self.delay_seq)  
-        plt.savefig("./analysis/network/delay_seq.jpg")
+        plt.savefig("./results/network/delay_seq.jpg")
 
     
 if __name__ == '__main__':

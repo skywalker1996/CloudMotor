@@ -74,7 +74,7 @@ if __name__ == '__main__':
     BATCH_TEST = True
 
     if(BATCH_TEST):
-        record_file = "./results/dataset_03.csv"
+        record_file = "./results/datasets/dataset_03.csv"
         redis_addr = config_loader.get_redis_address()
         redis_client = redis.StrictRedis(host=redis_addr[0], port=redis_addr[1], db=0, decode_responses=True)
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
                 writer.writerow(headers)
 
         # 批量实验参数
-        delay_mean_set = list(range(0,101,5))
+        delay_mean_set = list(range(0, 101, 5))
         loss_mean_set = [i/100.0 for i in list(range(5,51,5))]
         control_interval_set = [10]
         epoch = 1
