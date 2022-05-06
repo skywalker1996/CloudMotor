@@ -17,10 +17,10 @@
 
 #### 文件夹介绍
 
-* analysis：数据分析和绘图工具
 * configs：配置管理
-* logs：实验数据log
-* results：结果记录
+* logs：保存实验数据记录数据
+* model：机器学习模型
+* results：分析结果目录
 * tests：测试文件
 * utils：工具代码
 
@@ -45,29 +45,41 @@ server:
 client:
   address:
     local_ip: 127.0.0.1    //localhost ip，不用改
-    ip: 172.30.38.194      //本机对外ip，需要改成自己的
+    ip: 172.30.38.194      //本机ip，需要改成自己的
     port: 9992
 ```
 
 2. 编辑configs/global.yaml
 ```
-  use_trace: 是否使用mahimahi trace，1为使用，0为不使用
-  trace: trace文件位置
-  base_delay: 基础时延，仅当use_trace为1时有效
-  control_interval: 控制周期，单位为秒
-  running_time: 实验运行时间，单位为秒
+
+
+experiment:
+  name: 每次实验需要取一个name，会自动创建name文件夹来存放实验数据           
+  use_mahimahi: 是否使用mahimahi，填false
+  batch_experiment: 是否进行批量实验，填true
+  running_time: 单个epoch的运行时间，单位为秒
+
+# 目前不使用mahimahi，不用管这里
+mahimahi:
+  trace: trace文件路径
+  base_delay: mahimahi链路基础时延
+
+batch_experiment_params:
+  delay_mean: [0,100,5]   #[start, end, step_size]
+  loss_mean: [5,50,5]     #[start, end, step_size]
+  control_interval: [10,10,1]    #[start, end, step_size]
+  epoch: 1   #单组参数运行的epoch次数
+
 ```
 
 3. 运行实验
 > python run_experiment.py
 
 4. 分析实验数据
-* 实验运行完后，会输出平均控制精度
-* 实验数据会保存在logs文件夹下对应时间的文件夹中
-* 每次跑完实验，最新的数据都会放在logs/current_log中
-* analysis中有绘图的代码（plot.py），默认使用logs/current_log中的数据
+* 实验运行完后，实验数据会保存在logs/experiment_name文件夹下
+* 运行results/analysis.py，需要修改里面的experiment_name，指定TIME_START和TIME_END
+* results中有绘图的代码（plot1和plot2），默认使用logs/current_log中的数据
 
-![](/Users/zhijian/Desktop/Lab/GTS/Workspace/motor/analysis/2_03_005.png)
 
 
 

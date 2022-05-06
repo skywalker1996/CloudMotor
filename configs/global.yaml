@@ -1,10 +1,11 @@
 address_config: address_cloud.yaml
 
 experiment:
+  name: test_01
   use_mahimahi: false
   batch_experiment: true
   running_time: 10
-  name: test_01
+
 
 mahimahi:
   #trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/subset/report_bus_0001.log
