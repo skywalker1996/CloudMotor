@@ -26,11 +26,13 @@ class MotorServer:
     """
     MotorServer
     """
-    def __init__(self, delay_mean, loss_mean, interval):
+    def __init__(self, delay_mean, loss_mean, interval, epoch):
 
         self.config_loader = configLoader()
         self.delay_mean = delay_mean
         self.loss_mean = loss_mean
+
+        self.epoch = epoch
 
         self.name = self.config_loader.get_experiment_name()
         self.control_interval = interval
@@ -251,7 +253,7 @@ class MotorServer:
         if not os.path.exists(current_record_dir):
             os.makedirs(current_record_dir)
         
-        record_file = f"{self.delay_mean}_{self.loss_mean}_{self.control_interval}_record.csv"
+        record_file = f"{self.delay_mean}_{self.loss_mean}_{self.control_interval}_{self.epoch}_record.csv"
         current_record_file = f"motor_{client_id}.csv"
 
         record_dataframe = pd.DataFrame.from_dict(self.logs[client_id])
@@ -269,10 +271,11 @@ if __name__ == '__main__':
     parser.add_argument('--delay_mean', type=float, default=0)
     parser.add_argument('--loss_mean', type=float, default=0)
     parser.add_argument('--interval', type=float, default=5)
+    parser.add_argument('--epoch', type=int, default=0)
 
     args = parser.parse_args()
 
-    motor_server = MotorServer(delay_mean = args.delay_mean, loss_mean = args.loss_mean, interval = args.interval)
+    motor_server = MotorServer(delay_mean = args.delay_mean, loss_mean = args.loss_mean, interval = args.interval, epoch=args.epoch)
     motor_server.start()
     # while not motor_server.get_exit_flag():
     #     time.sleep(1)

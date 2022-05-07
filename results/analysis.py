@@ -20,7 +20,7 @@ def sla_comp(omega_err_seq, target_omega):
 
 
 ## 只需要改这里
-EXPERIMENT_NAME = "test_01"
+EXPERIMENT_NAME = "test_02"
 TIME_START = 1
 TIME_END = 11
 

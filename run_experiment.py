@@ -13,7 +13,7 @@ import redis
 import csv
 
 
-def run_experiment(delay_mean, loss_mean, control_interval):
+def run_experiment(delay_mean, loss_mean, control_interval, epoch):
     """
     run experiment function
     """
@@ -29,7 +29,7 @@ def run_experiment(delay_mean, loss_mean, control_interval):
     Popen("sh ./kill.sh", shell=True, stdout=PIPE, stderr=PIPE)
     time.sleep(2)
 
-    server_comds = f'python3 motorServer.py --delay_mean {delay_mean} --loss_mean {loss_mean} --interval {control_interval}'
+    server_comds = f'python3 motorServer.py --delay_mean {delay_mean} --loss_mean {loss_mean} --interval {control_interval} --epoch {epoch}'
     client_comds = f'python3 motorClient.py --id 001 --target_speed 3000 --interval {control_interval}'
 
     if use_trace:
@@ -97,7 +97,7 @@ if __name__ == '__main__':
                     print(f"\n===> experimrnt {count} | delay_mean: {delay_mean}ms | loss_mean: {loss_mean} | control_interval: {control_interval}ms")
                     for i in range(epoch):
                         print(f"\n=> epoch {i}")
-                        run_experiment(delay_mean, loss_mean, control_interval)
+                        run_experiment(delay_mean, loss_mean, control_interval, i)
                         result = eval(redis_client.get(redis_result_key))
                         fields = [delay_mean, loss_mean, control_interval]
                         fields.extend(result)
@@ -110,6 +110,6 @@ if __name__ == '__main__':
         delay_mean = 50
         loss_mean = 0.1
         control_interval = 10
-        run_experiment(delay_mean, loss_mean, control_interval)
+        run_experiment(delay_mean, loss_mean, control_interval, 0)
                     
 
