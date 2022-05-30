@@ -1,0 +1,29 @@
+address_config: address_cloud.yaml
+
+experiment:
+  name: interval_20ms
+  use_mahimahi: false
+  batch_experiment: true
+  running_time: 70
+
+
+mahimahi:
+  #trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/subset/report_bus_0001.log
+  trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/static/96mbps.log
+  base_delay: 50
+
+batch_experiment_params:
+  delay_mean: [65,100,1]   #[start, end, step]
+  loss_mean: [1,50,1]
+  control_interval: [20,20,1]
+  epoch: 1
+
+
+
+
+  
+
+
+
+
+

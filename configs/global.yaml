@@ -1,17 +1,29 @@
-server:
-  address:
-    ip: 192.168.31.165
-    port: 9990
+address_config: address_cloud.yaml
 
-register:
-  address:
-    ip: 192.168.31.165
-    port: 9991
+experiment:
+  name: test
+  use_mahimahi: false
+  batch_experiment: true
+  running_time: 5
 
-client:
-  address:
-    ip: 192.168.31.165
-    port: 9992
+
+mahimahi:
+  #trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/subset/report_bus_0001.log
+  trace: /home/zhijian/workspace_fast/Monax/traces/mahimahi/trace/static/96mbps.log
+  base_delay: 50
+
+batch_experiment_params:
+  delay_mean: [89,100,1]   #[start, end, step]
+  loss_mean: [1,50,1]
+  control_interval: [20,20,1]
+  epoch: 1
+
+
+
+
+  
+
+
 
 
 

@@ -1,0 +1,20 @@
+server:
+  address:
+    local_ip: 127.0.0.1
+    ip: 100.64.0.4
+    port: 9990
+
+client:
+  address:
+    local_ip: 127.0.0.1
+    ip: 172.30.38.194
+    port: 9992
+
+redis:
+  address:
+    ip: 47.101.194.15
+    port: 6379
+
+
+
+
