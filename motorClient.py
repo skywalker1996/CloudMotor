@@ -100,7 +100,7 @@ class MotorClient:
 
     def register(self):
         """
-        send registry message
+        send registry message to server
         """
         # print("waiting for server signal...")
 
@@ -111,7 +111,7 @@ class MotorClient:
             if data["type"] == TYPE_START:
                 self.server_address = address
         except JSONDecodeError as json_error:
-            print("数据包解析出错！", json_error)
+            print("data parse error!", json_error)
 
         register_data = {"type": TYPE_REGISTER, "client_id": self.client_id, "address": self.client_address,
                          "target_rpm": self.target_rpm, "target_omega": self.motor.get_nominal_values()[KEY_OMEGA]}
@@ -121,7 +121,7 @@ class MotorClient:
 
     def upload_monitor_info(self, omega, speed, current, time):
         """
-        upload monitor info
+        upload monitor info to server
         """
         monitor_data = {"type": TYPE_MONITOR, KEY_CLIENT_ID: self.client_id, KEY_OMEGA: omega,
                         KEY_SPEED: speed, KEY_CURRENT: current, KEY_TIME: time}
@@ -131,7 +131,7 @@ class MotorClient:
 
     def stop(self):
         """
-        stop
+        stop and send stop msg to server
         """
         print("stopping ...")
         stop_msg = {"type": "stop", KEY_CLIENT_ID: self.client_id}

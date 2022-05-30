@@ -20,16 +20,16 @@ def sla_comp(omega_err_seq, target_omega):
 
 
 ## 只需要改这里
-EXPERIMENT_NAME = "test_02"
-TIME_START = 1
-TIME_END = 11
+EXPERIMENT_NAME = "interval_20ms"
+TIME_START = 10
+TIME_END = 75
 
 
 TARGET_SPEED = 3000
 TARGET_OMEGA = round((TARGET_SPEED * 2 * math.pi) / 60, 2)
 
-input_dir = os.path.join(os.getcwd(), f"logs/{EXPERIMENT_NAME}")
-output_file = os.path.join(os.getcwd(), f"results/datasets/{EXPERIMENT_NAME}_{TIME_START}_{TIME_END}.csv")
+input_dir = f"../logs/{EXPERIMENT_NAME}"
+output_file = f"./datasets/{EXPERIMENT_NAME}_{TIME_START}_{TIME_END}.csv"
 
 headers = ["delay_mean", "loss_mean", "control_interval"]
 headers.extend([f"sla({i}%)" for i in range(90,100)])

@@ -8,7 +8,7 @@
 
 > pip install -r requirements 
 
-3. Redis安装 
+3. 安装Redis
 
 4. 下载仿真平台代码
 
@@ -26,15 +26,16 @@
 
 #### 核心代码文件
 
-* motor.py : 电机模型类，电机参数都在这里调
+* model/motor.py : 电机模型类，电机参数都在这里调
+* utils/networkSim.py : 网络仿真类，负责输出实时的时延和丢包
 * motorClient.py : 电机客户端类，负责接收服务器下发的决策并控制电机
 * motorServer.py : 电机服务器类，负责PID控制和决策下发
 * run_experiment.py : 运行实验脚本，会启动motorClient和motorServer
 
 #### 使用流程
 
-1. 编辑configs/configs_cloud.yaml
-
+1. 编辑configs/address_cloud.yaml
+ 
 ```
 server:
   address:   
@@ -47,12 +48,15 @@ client:
     local_ip: 127.0.0.1    //localhost ip，不用改
     ip: 172.30.38.194      //本机ip，需要改成自己的
     port: 9992
+
+redis:
+  address:           
+    ip: xxx      // redis ip, 需要改成自己的
+    port: 6379   // redis 默认端口号
 ```
 
 2. 编辑configs/global.yaml
 ```
-
-
 experiment:
   name: 每次实验需要取一个name，会自动创建name文件夹来存放实验数据           
   use_mahimahi: 是否使用mahimahi，填false
@@ -76,9 +80,13 @@ batch_experiment_params:
 > python run_experiment.py
 
 4. 分析实验数据
-* 实验运行完后，实验数据会保存在logs/experiment_name文件夹下
-* 运行results/analysis.py，需要修改里面的experiment_name，指定TIME_START和TIME_END
-* results中有绘图的代码（plot1和plot2），默认使用logs/current_log中的数据
+* 实验运行完后，实验数据会保存在logs/{experiment_name}文件夹下
+* 运行results/analysis.py，需要修改里面的experiment_name，指定TIME_START和TIME_END    
+> analysis.py输入输出分别为：    
+input_dir = f"../logs/{EXPERIMENT_NAME}"    
+output_file = f"./datasets/{EXPERIMENT_NAME}_{TIME_START}_{TIME_END}.csv"
+
+* results中有绘图的代码（plot1、plot2等）
 
 
 

@@ -1,10 +1,10 @@
 address_config: address_cloud.yaml
 
 experiment:
-  name: test_02
+  name: test
   use_mahimahi: false
   batch_experiment: true
-  running_time: 10
+  running_time: 5
 
 
 mahimahi:
@@ -13,10 +13,10 @@ mahimahi:
   base_delay: 50
 
 batch_experiment_params:
-  delay_mean: [100,100,5]   #[start, end, step]
-  loss_mean: [50,50,5]
-  control_interval: [5,5,1]
-  epoch: 5
+  delay_mean: [89,100,1]   #[start, end, step]
+  loss_mean: [1,50,1]
+  control_interval: [20,20,1]
+  epoch: 1
 
 
 

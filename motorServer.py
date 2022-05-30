@@ -75,12 +75,17 @@ class MotorServer:
         """
         start runnning
         """
+
+        # 控制线程，负责从接收队列中获取电机状态数据包，然后计算控制决策，最后下发控制指令
         self.control_thread.daemon = True
         self.control_thread.start()
 
+        # 接收线程，负责接收client上传的数据包，放入接收队列
         self.recv_thread.daemon = True
         self.recv_thread.start()
         
+        # 目前时延和丢包全都在server端进行模拟，所以暂时不用mahimahi
+        # pacer线程负责发送控制指令数据包，同时仿真时延分布和丢包分布
         if not self.use_mahimahi:
             self.pacer_thread.daemon = True
             self.pacer_thread.start()
@@ -108,6 +113,7 @@ class MotorServer:
                 if KEY_TYPE not in data:
                     continue
                 if data[KEY_TYPE] == TYPE_REGISTER:
+                    # 注册电机设备
                     client_id = data[KEY_CLIENT_ID]
                     client_address = data[KEY_ADDRESS]
                     target_rpm = data[KEY_TARGET_RPM]
@@ -118,12 +124,12 @@ class MotorServer:
                     self.client_info[client_id] = {KEY_ADDRESS: tuple(client_address), KEY_TARGET_RPM: target_rpm,
                                                    KEY_TARGET_OMEGA: target_omega, KEY_CONTROLLER: controller}
                         
-                    
                     self.records[client_id] = {"sum": 0.0, "omega_err": [], "count": 0}
                     self.logs[client_id] = {KEY_TIME: [], KEY_SPEED: [], KEY_OMEGA: [], KEY_CURRENT: [], KEY_OMEGA_ERR: []}
                     print(f"Motor client {client_id} from {client_address} connected, target_omega: {target_omega}")
                     
                 elif data[KEY_TYPE] == TYPE_MONITOR:
+                    # 处理电机状态数据，生成控制指令并放入pacer的发送队列
                     client_id = data[KEY_CLIENT_ID]
                     state_omega = data[KEY_OMEGA]
                     state_speed = data[KEY_SPEED]
@@ -157,8 +163,8 @@ class MotorServer:
                         print("motorClient 信息未注册！")
 
                 elif data[KEY_TYPE] == TYPE_STOP:
+                    # stop指令，结束本次实验
                     client_id = data[KEY_CLIENT_ID]
-
                     avg_err = round(self.records[client_id]["sum"] / self.records[client_id]["count"], 4)
                     self.avg_precision = 100-avg_err*100
                     self.precision_sla = self.sla_comp(self.records[client_id]["omega_err"], self.client_info[client_id][KEY_TARGET_OMEGA])
@@ -176,7 +182,9 @@ class MotorServer:
                 print(traceback.print_exc())
 
     def sla_comp(self, omega_err_seq, target_omega):
-        
+        """
+        计算SLA指标
+        """
         sorted_seq = sorted(omega_err_seq)
         total_count = len(sorted_seq)
         results = []

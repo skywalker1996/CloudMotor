@@ -33,7 +33,7 @@ def run_experiment(delay_mean, loss_mean, control_interval, epoch):
     client_comds = f'python3 motorClient.py --id 001 --target_speed 3000 --interval {control_interval}'
 
     if use_trace:
-        # start monax client and serve
+        # start monax server using mahimahi
         start_server = ['mm-delay', str(base_delay),
                         'mm-link', trace_file, trace_file,
                         '--uplink-queue=droptail --uplink-queue-args=packets=2048',
@@ -44,8 +44,6 @@ def run_experiment(delay_mean, loss_mean, control_interval, epoch):
         start_server = server_comds
 
     start_client = client_comds
-    # print(start_server)
-    # print(start_client)
 
     client = Popen(start_client, shell=True)
     time.sleep(3)
@@ -72,6 +70,7 @@ if __name__ == '__main__':
     batch_experiment = config_loader.get_batch_experiment()
 
     if(batch_experiment):
+        # 批量实验
         result_file = f"./results/datasets/{config_loader.get_experiment_name()}.csv"
         redis_addr = config_loader.get_redis_address()
         redis_client = redis.StrictRedis(host=redis_addr[0], port=redis_addr[1], db=0, decode_responses=True)
@@ -107,6 +106,7 @@ if __name__ == '__main__':
                             writer.writerow(fields)
                     count += 1
     else:
+        # 单次实验
         delay_mean = 50
         loss_mean = 0.1
         control_interval = 10
